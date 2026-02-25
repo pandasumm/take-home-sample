@@ -23,6 +23,25 @@ function App() {
     }
   })
 
+  const buyMutation = useMutation({
+    mutationFn: async (id) => {
+      const res = await fetch(`http://localhost:4000/api/tickets/${id}/buy`, {
+        method: 'POST'
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Buy failed')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      refetchTickets()
+    }
+  })
+
+  const handleBuy = (id) => {
+    buyMutation.mutate(id)
+  }
 
   const grouped = (tickets || []).reduce((acc, t) => {
     const key = `${t.show_name}__${t.date}`
@@ -53,11 +72,22 @@ function App() {
               {group.rows.map(t => (
                 <li key={t.id}>
                   Section: {t.section} | Price: ${t.price} | Count: {t.count}
+                  <button
+                    style={{ marginLeft: 8 }}
+                    disabled={t.count < 0}
+                    onClick={() => handleBuy(t.id)}
+                  >
+                    {t.count > 0 ? 'Buy' : 'Sold Out?'}
+                  </button>
                 </li>
               ))}
             </ul>
           </div>
         ))}
+
+        {buyMutation.isError && (
+          <p style={{ color: 'red' }}>Buy error: {buyMutation.error.message}</p>
+        )}
       </div>
     </>
   )
